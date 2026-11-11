@@ -37,6 +37,25 @@ SPECS = [
          "required": ["to_email", "subject", "body"]}}},
 ]
 
+# Hardened variant: the model cannot choose where a message goes. The recipient
+# is not a parameter at all; the orchestrator binds it to the authenticated
+# customer's address on file (Agent._bind_recipient).
+_BOUND_MESSAGE_SPEC = {
+    "name": "send_secure_message",
+    "description": "Send a message to the customer's own email address on file, for example a confirmation "
+                   "or a statement summary. The bank sets the recipient; you only write the subject and body.",
+    "inputSchema": {"json": {"type": "object", "properties": {
+        "subject": {"type": "string"}, "body": {"type": "string"}},
+        "required": ["subject", "body"]}}}
+
+
+def tool_specs(bind_recipient: bool) -> list[dict]:
+    """Tool definitions offered to the model."""
+    if not bind_recipient:
+        return SPECS
+    return [_BOUND_MESSAGE_SPEC if s["name"] == "send_secure_message" else s for s in SPECS]
+
+
 _MINIMAL_FIELDS = ("customer_id", "name", "balance", "payees")
 
 

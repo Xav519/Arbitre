@@ -13,7 +13,7 @@ from . import guards, policy
 from .models import strip_reasoning
 from .prompts import system_prompt
 from .seclog import Trace
-from .tools import SPECS
+from .tools import tool_specs
 
 
 class Agent:
@@ -41,9 +41,10 @@ class Agent:
         messages = [{"role": "user", "content": [{"text": message}]}]
         state = policy.TurnState()
         answer = "I wasn't able to complete that request."
+        specs = tool_specs(bind_recipient=cfg.on("tool_policy"))
 
         for _ in range(cfg.max_tool_calls + 2):
-            reply = self.model.converse(system, messages, SPECS)
+            reply = self.model.converse(system, messages, specs)
             trace.model_calls += 1
             messages.append(reply)
             uses = [b["toolUse"] for b in reply.get("content", []) if "toolUse" in b]
@@ -87,6 +88,8 @@ class Agent:
     def _run_tool(self, use: dict, customer: dict, state: policy.TurnState, trace: Trace) -> dict:
         cfg = self.cfg
         name, args = use["name"], dict(use.get("input") or {})
+        if name == "send_secure_message" and cfg.on("tool_policy"):
+            args = self._bind_recipient(args, customer)
 
         denied = []
         for v in policy.evaluate(name, args, customer, state, cfg.transfer_limit):
@@ -106,6 +109,19 @@ class Agent:
             state.tainted = True
             return self._tool_result(use, text=self._prepare_untrusted(name, result, trace))
         return self._tool_result(use, result, error="error" in result)
+
+    @staticmethod
+    def _bind_recipient(args: dict, customer: dict) -> dict:
+        """Address the message to the customer's email on file, from the session, not from the model.
+
+        The hardened tool schema has no recipient, so a model that follows it never
+        supplies one. If a recipient is supplied anyway it is left in place for the
+        policy to judge: a foreign address is denied and logged as an exfiltration
+        attempt. With no email on file nothing is filled in and the schema check denies.
+        """
+        if "to_email" not in args and customer.get("email"):
+            return {**args, "to_email": customer["email"]}
+        return args
 
     def _prepare_untrusted(self, name: str, result: dict, trace: Trace) -> str:
         """Scan, optionally withhold, and optionally spotlight retrieved content."""
