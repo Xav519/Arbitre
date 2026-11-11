@@ -78,14 +78,23 @@ def detail_table(vuln: dict, hard: dict) -> str:
     return "\n".join(lines)
 
 
+def _benign_cell(b: dict | None) -> str:
+    """A legitimate request's outcome. A failure names the controls that blocked it, or says none did."""
+    if b is None:
+        return "not run"
+    if b["passed"]:
+        return "ok"
+    if b.get("response", "").startswith("[harness]"):
+        return "FAILED (harness error, see results JSON)"
+    fired = _labels(b.get("blocked_by", []))
+    return f"FAILED (blocked by {fired})" if fired else "FAILED (no control fired; the model did not complete it)"
+
+
 def benign_table(vuln: dict, hard: dict) -> str:
     hb = {b["id"]: b for b in hard["benign"]}
     lines = ["| ID | Legitimate request | Vulnerable | Hardened |", "|---|---|---|---|"]
     for b in vuln["benign"]:
-        h = hb.get(b["id"], {"passed": False, "blocked_by": []})
-        note = "" if h["passed"] else f" (blocked by {_labels(h['blocked_by']) or 'unknown'})"
-        lines.append(f"| {b['id']} | {b['name']} | {'ok' if b['passed'] else 'FAILED'} "
-                     f"| {'ok' if h['passed'] else 'FAILED'}{note} |")
+        lines.append(f"| {b['id']} | {b['name']} | {_benign_cell(b)} | {_benign_cell(hb.get(b['id']))} |")
     return "\n".join(lines)
 
 

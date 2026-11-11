@@ -74,6 +74,7 @@ def run(target, only: set[str] | None = None) -> dict:
             "blocked_by": _controls(events, "blocked"),
             "detected_by": sorted({e["ib_event"] for e in events}),
             "response": result.get("response", "")[:400],
+            "tool_calls": result.get("trace", {}).get("tool_calls", [])[:12],
         })
     target.reset()
     return {

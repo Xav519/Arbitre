@@ -110,3 +110,24 @@ def test_regression_guard_fails_on_noisy_legitimate_traffic(tmp_path):
                        "detected_by": ["unsafe_output_rendering"]})
     assert quiet.returncode == 0
     assert noisy.returncode == 1 and "raised security events" in noisy.stdout
+
+
+def test_a_failed_legitimate_request_names_the_blocking_control_or_says_none_fired():
+    """Live run 2026-11-11T21:20Z, OK-02: the model declined to call transfer_funds, nothing was
+    blocked, and the report printed "blocked by unknown"."""
+    def case(cid, **kw):
+        return {"id": cid, "name": cid, "passed": False, "blocked_by": [], "detected_by": [],
+                "response": "", **kw}
+    vuln = {"benign": [case("A", passed=True), case("B", passed=True), case("C", passed=True)]}
+    hard = {"benign": [case("A"), case("B", blocked_by=["tool_policy", "output_filter"]),
+                       case("C", response="[harness] agent call failed: timeout")]}
+    table = report.benign_table(vuln, hard)
+    assert "unknown" not in table
+    assert "| A | A | ok | FAILED (no control fired; the model did not complete it) |" in table
+    assert "| B | B | ok | FAILED (blocked by tool policy, output filter) |" in table
+    assert "| C | C | ok | FAILED (harness error, see results JSON) |" in table
+
+
+def test_benign_records_carry_tool_calls(runs):
+    ok02 = next(b for b in runs[1]["benign"] if b["id"] == "OK-02")
+    assert [c["name"] for c in ok02["tool_calls"]] == ["transfer_funds"]
