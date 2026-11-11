@@ -1,0 +1,14 @@
+[project]
+name = "innovabank"
+version = "1.0.0"
+description = "An agentic banking assistant on AWS in two postures, vulnerable and hardened, with one automated attack bench against both."
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Xavier Dupuis" }]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["app", "harness", "supplychain"]
+
+[tool.ruff]
+line-length = 120

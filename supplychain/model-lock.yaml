@@ -1,0 +1,35 @@
+# Model lock file. Nothing ships that is not listed here.
+# CI fails if the code or Terraform references a model outside this file, if an
+# artifact is unpinned or fails its hash, or if any artifact can execute code on load.
+version: 1
+
+policy:
+  allowed_sources:
+    aws-bedrock: [amazon]          # source: approved publishers
+    huggingface: []                # no open-weight publisher is approved yet
+  allowed_artifact_formats: [safetensors, gguf, onnx]
+  require_pinned_revision: true    # a full 40 character commit, never a branch or tag
+
+models:
+  - name: agent-llm
+    role: reasoning and tool use
+    source: aws-bedrock
+    publisher: amazon
+    model_id: amazon.nova-lite-v1:0
+    inference_profile: us.amazon.nova-lite-v1:0
+    license: AWS Service Terms
+  - name: kb-embeddings
+    role: knowledge base embeddings
+    source: aws-bedrock
+    publisher: amazon
+    model_id: amazon.titan-embed-text-v2:0
+    license: AWS Service Terms
+
+# Externally sourced weights. Each entry needs: name, source, publisher, repo,
+# revision, file (relative to supplychain/artifacts), sha256, format, license.
+artifacts: []
+
+datasets:
+  - name: knowledge-base-corpus
+    role: retrieval corpus for the assistant
+    path: corpus/kb/public

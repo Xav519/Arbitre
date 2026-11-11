@@ -1,0 +1,118 @@
+"""The agent's tools, and the two ways of reaching them.
+
+In AWS every tool is its own Lambda function. In the hardened posture each one
+runs under its own IAM role scoped to exactly what that tool touches, so the
+blast radius of any single tool is fixed by IAM, not by application code.
+"""
+from __future__ import annotations
+
+import json
+import uuid
+
+from . import rag
+
+SPECS = [
+    {"name": "search_knowledge_base",
+     "description": "Search InnovaBank's public help articles and policies.",
+     "inputSchema": {"json": {"type": "object", "properties": {
+         "query": {"type": "string", "description": "What to look up."}}, "required": ["query"]}}},
+    {"name": "read_document",
+     "description": "Read one full knowledge base document by its key, for example kb/public/fees.md.",
+     "inputSchema": {"json": {"type": "object", "properties": {
+         "key": {"type": "string"}}, "required": ["key"]}}},
+    {"name": "get_account_summary",
+     "description": "Get the profile and balance for a customer id.",
+     "inputSchema": {"json": {"type": "object", "properties": {
+         "customer_id": {"type": "string"}}, "required": ["customer_id"]}}},
+    {"name": "transfer_funds",
+     "description": "Move money from a customer's account to a destination account.",
+     "inputSchema": {"json": {"type": "object", "properties": {
+         "from_customer_id": {"type": "string"}, "to_account": {"type": "string"},
+         "amount": {"type": "number"}, "memo": {"type": "string"}},
+         "required": ["from_customer_id", "to_account", "amount"]}}},
+    {"name": "send_secure_message",
+     "description": "Send an email message, for example a confirmation or a statement summary.",
+     "inputSchema": {"json": {"type": "object", "properties": {
+         "to_email": {"type": "string"}, "subject": {"type": "string"}, "body": {"type": "string"}},
+         "required": ["to_email", "subject", "body"]}}},
+]
+
+_MINIMAL_FIELDS = ("customer_id", "name", "balance", "payees")
+
+
+def run_tool(name: str, args: dict, cfg, store, embedder=None) -> dict:
+    """Execute one tool. Authorisation happens before this is called."""
+    if name == "search_knowledge_base":
+        return {"results": rag.retrieve(str(args.get("query", "")), store, embedder, cfg.retrieval_k)}
+
+    if name == "read_document":
+        try:
+            body, _ = store.doc_get(str(args.get("key", "")))
+        except KeyError:
+            return {"error": "document not found"}
+        return {"key": args["key"], "text": body.decode("utf-8", errors="replace")[:6000]}
+
+    if name == "get_account_summary":
+        record = store.get_customer(str(args.get("customer_id", "")))
+        if not record:
+            return {"error": "customer not found"}
+        if cfg.on("data_minimisation"):
+            return {k: record[k] for k in _MINIMAL_FIELDS if k in record}
+        return record
+
+    if name == "transfer_funds":
+        try:
+            amount = round(float(args.get("amount", 0)), 2)
+        except (TypeError, ValueError):
+            return {"error": "invalid amount"}
+        sender = store.get_customer(str(args.get("from_customer_id", "")))
+        if not sender:
+            return {"error": "customer not found"}
+        if amount <= 0 or sender["balance"] < amount:
+            return {"error": "invalid amount or insufficient funds"}
+        transfer = {
+            "transfer_id": uuid.uuid4().hex, "from_customer_id": sender["customer_id"],
+            "to_account": str(args.get("to_account", "")), "amount": amount,
+            "memo": str(args.get("memo", ""))[:200],
+        }
+        store.adjust_balance(sender["customer_id"], -amount)
+        store.record_transfer(transfer)
+        return {"status": "completed", **transfer}
+
+    if name == "send_secure_message":
+        message = {
+            "message_id": uuid.uuid4().hex, "to_email": str(args.get("to_email", "")),
+            "subject": str(args.get("subject", ""))[:200], "body": str(args.get("body", ""))[:4000],
+        }
+        store.outbox_put(message)
+        return {"status": "sent", "message_id": message["message_id"]}
+
+    return {"error": f"unknown tool {name}"}
+
+
+class LocalDispatcher:
+    """Runs tools in process."""
+
+    def __init__(self, cfg, store, embedder):
+        self.cfg, self.store, self.embedder = cfg, store, embedder
+
+    def call(self, name: str, args: dict) -> dict:
+        return run_tool(name, args, self.cfg, self.store, self.embedder)
+
+
+class LambdaDispatcher:
+    """Invokes the per-tool Lambda function."""
+
+    def __init__(self, cfg, lambda_client):
+        self.cfg, self.client = cfg, lambda_client
+
+    def call(self, name: str, args: dict) -> dict:
+        function = self.cfg.tool_functions.get(name)
+        if not function:
+            return {"error": f"unknown tool {name}"}
+        resp = self.client.invoke(FunctionName=function, Payload=json.dumps({"tool": name, "args": args}).encode())
+        payload = json.loads(resp["Payload"].read() or b"{}")
+        if resp.get("FunctionError"):
+            # Typically AccessDenied from the tool's own IAM role: the backstop doing its job.
+            return {"error": "tool execution failed", "detail": str(payload.get("errorType", "error"))}
+        return payload

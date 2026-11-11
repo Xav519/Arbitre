@@ -1,0 +1,122 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:f4170f90-05ed-5f28-8f20-61eebb4a2370",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-11-09T00:00:00Z",
+    "component": {
+      "type": "application",
+      "bom-ref": "app:innovabank",
+      "name": "innovabank",
+      "version": "1.0.0"
+    },
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "ib_supplychain",
+          "version": "1.0.0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model:agent-llm",
+      "name": "amazon.nova-lite-v1:0",
+      "supplier": {
+        "name": "amazon"
+      },
+      "description": "reasoning and tool use",
+      "licenses": [
+        {
+          "license": {
+            "name": "AWS Service Terms"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "innovabank:source",
+          "value": "aws-bedrock"
+        },
+        {
+          "name": "innovabank:role",
+          "value": "reasoning and tool use"
+        },
+        {
+          "name": "innovabank:inference_profile",
+          "value": "us.amazon.nova-lite-v1:0"
+        },
+        {
+          "name": "innovabank:hosting",
+          "value": "managed"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model:kb-embeddings",
+      "name": "amazon.titan-embed-text-v2:0",
+      "supplier": {
+        "name": "amazon"
+      },
+      "description": "knowledge base embeddings",
+      "licenses": [
+        {
+          "license": {
+            "name": "AWS Service Terms"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "innovabank:source",
+          "value": "aws-bedrock"
+        },
+        {
+          "name": "innovabank:role",
+          "value": "knowledge base embeddings"
+        },
+        {
+          "name": "innovabank:hosting",
+          "value": "managed"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "dataset:knowledge-base-corpus",
+      "name": "knowledge-base-corpus",
+      "description": "retrieval corpus for the assistant",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "eae765ab479ca65c676b8b50ae7194ff84053102d3c8b02d5ecacf658d2c9ccc"
+        }
+      ],
+      "properties": [
+        {
+          "name": "innovabank:path",
+          "value": "corpus/kb/public"
+        },
+        {
+          "name": "innovabank:documents",
+          "value": "5"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "app:innovabank",
+      "dependsOn": [
+        "model:agent-llm",
+        "model:kb-embeddings",
+        "dataset:knowledge-base-corpus"
+      ]
+    }
+  ]
+}

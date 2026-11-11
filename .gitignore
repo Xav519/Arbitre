@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.demo-artifacts/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.build/
+outputs.json
+
+# Raw run records can hold model output. The rendered reports in docs/results are what gets committed.
+results/*.json
