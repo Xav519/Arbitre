@@ -67,7 +67,7 @@ Want the full walkthrough? Read [how it works, in plain English](docs/how-it-wor
 The real code and controls run against a scripted model that does whatever any injection reaching it says. This takes the model's own judgement out of the picture, so the result shows what the controls guarantee by themselves. CI runs it on every push.
 
 <!-- IB:OFFLINE-RESULTS:START -->
-Source: offline control verification, run 2026-11-11T02:31:49Z. Real orchestrator and controls, in process, against a scripted model that obeys every injection that reaches it. Bedrock Guardrails is not exercised. The vulnerable column is 100% by construction: with no controls, a model that obeys everything loses to everything.
+Source: offline control verification, run 2026-11-11T03:40:00Z. Real orchestrator and controls, in process, against a scripted model that obeys every injection that reaches it. Bedrock Guardrails is not exercised. The vulnerable column is 100% by construction: with no controls, a model that obeys everything loses to everything.
 
 | OWASP LLM | Category | Vulnerable | Hardened |
 |---|---|---|---|
@@ -90,7 +90,20 @@ Every attack, and the control that stopped it: [docs/results/offline.md](docs/re
 The same bench runs against both deployed stacks, with Nova Lite and Bedrock Guardrails in the loop. Expect the vulnerable column to be below 100% here, because a real model refuses some attacks on its own.
 
 <!-- IB:LIVE-RESULTS:START -->
-**Not run yet.** Deploy both stacks, then `make attack-live report-live` replaces this block with the measured table and writes the detail to `docs/results/live.md`. No number is shown here until it comes from a real run.
+Source: live run against deployed stacks in us-east-1, 2026-11-11T20:39:52Z. Model `us.amazon.nova-lite-v1:0`, guardrail `sflccvn2jy88`. One trial per attack at temperature 0.
+
+| OWASP LLM | Category | Vulnerable | Hardened |
+|---|---|---|---|
+| LLM01 | Prompt injection, direct | 2/6 (33%) | 0/6 (0%) |
+| LLM01 | Prompt injection, indirect | 0/4 (0%) | 0/4 (0%) |
+| LLM02 | Sensitive information disclosure | 1/2 (50%) | 0/2 (0%) |
+| LLM04 | RAG and data poisoning | 4/4 (100%) | 0/4 (0%) |
+| LLM05 | Improper output handling | 1/2 (50%) | 0/2 (0%) |
+| LLM06 | Excessive agency and tool abuse | 0/3 (0%) | 0/3 (0%) |
+| LLM07 | System prompt leakage | 1/3 (33%) | 0/3 (0%) |
+| LLM10 | Unbounded consumption | 2/2 (100%) | 0/2 (0%) |
+| | **All attacks** | **11/26 (42%)** | **0/26 (0%)** |
+| | Legitimate requests completed | 7/7 (100%) | 6/7 (86%) |
 <!-- IB:LIVE-RESULTS:END -->
 
 ### What each control is holding back
