@@ -25,12 +25,26 @@ def _by_category(run: dict) -> dict:
     return out
 
 
-def _stopped(attack: dict) -> str:
-    if attack["succeeded"]:
+ATTRIBUTION_NOTE = (
+    "How to read the last column. Controls are listed when they blocked something during the attack. "
+    "When several are listed, any one of them may have been enough; the ablation report measures which "
+    "control an attack actually depends on. When an attack also failed against the vulnerable stack, the "
+    "model declined on its own, so the hardened controls that fired are shown but not credited with stopping it."
+)
+
+
+def _labels(controls: list[str]) -> str:
+    return ", ".join(CONTROL_LABELS.get(c, c) for c in controls)
+
+
+def _outcome(hard: dict, vuln: dict) -> str:
+    """Explain a hardened result without crediting controls for what the model refused anyway."""
+    if hard["succeeded"]:
         return "**not stopped**"
-    if attack["blocked_by"]:
-        return ", ".join(CONTROL_LABELS.get(c, c) for c in attack["blocked_by"])
-    return "no control fired (payload never reached the model, or the model declined)"
+    fired = _labels(hard["blocked_by"])
+    if not vuln["succeeded"]:
+        return "model declined (also failed on vulnerable)" + (f"; controls also fired: {fired}" if fired else "")
+    return f"blocked by {fired}" if fired else "no control fired (the model declined)"
 
 
 def summary_table(vuln: dict, hard: dict) -> str:
@@ -52,14 +66,15 @@ def summary_table(vuln: dict, hard: dict) -> str:
 
 def detail_table(vuln: dict, hard: dict) -> str:
     hv = {a["id"]: a for a in hard["attacks"]}
-    lines = ["| ID | Attack | ATLAS | Vulnerable | Hardened | Stopped by |", "|---|---|---|---|---|---|"]
+    lines = ["| ID | Attack | ATLAS | Vulnerable | Hardened | Why it failed on hardened |",
+             "|---|---|---|---|---|---|"]
     for a in vuln["attacks"]:
         h = hv.get(a["id"])
         if not h:
             continue
         lines.append(f"| {a['id']} | {a['name']} | {', '.join(a['atlas'])} "
                      f"| {'succeeded' if a['succeeded'] else 'failed'} "
-                     f"| {'succeeded' if h['succeeded'] else 'failed'} | {_stopped(h)} |")
+                     f"| {'succeeded' if h['succeeded'] else 'failed'} | {_outcome(h, a)} |")
     return "\n".join(lines)
 
 
@@ -68,7 +83,7 @@ def benign_table(vuln: dict, hard: dict) -> str:
     lines = ["| ID | Legitimate request | Vulnerable | Hardened |", "|---|---|---|---|"]
     for b in vuln["benign"]:
         h = hb.get(b["id"], {"passed": False, "blocked_by": []})
-        note = "" if h["passed"] else f" (blocked by {', '.join(h['blocked_by']) or 'unknown'})"
+        note = "" if h["passed"] else f" (blocked by {_labels(h['blocked_by']) or 'unknown'})"
         lines.append(f"| {b['id']} | {b['name']} | {'ok' if b['passed'] else 'FAILED'} "
                      f"| {'ok' if h['passed'] else 'FAILED'}{note} |")
     return "\n".join(lines)
@@ -89,7 +104,7 @@ def render(vuln: dict, hard: dict, title: str) -> str:
     return "\n\n".join([
         f"# {title}", provenance(vuln, hard),
         "## Attack success rate by category", summary_table(vuln, hard),
-        "## Every attack", detail_table(vuln, hard),
+        "## Every attack", ATTRIBUTION_NOTE, detail_table(vuln, hard),
         "## Legitimate requests", benign_table(vuln, hard),
     ]) + "\n"
 

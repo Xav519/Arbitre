@@ -73,3 +73,15 @@ def test_terraform_detections_match_application_events():
     tf = (ROOT / "infra/modules/stack/detections.tf").read_text()
     rows = re.findall(r'^\s+(\w+)\s+= \{ atlas = "([^"]+)", technique = "([^"]+)", owasp = "([^"]+)"', tf, re.M)
     assert {name: (atlas, tech, owasp) for name, atlas, tech, owasp in rows} == EVENTS
+
+
+def test_report_does_not_credit_controls_for_attacks_the_model_refused():
+    def rec(succeeded, blocked_by=()):
+        return {"succeeded": succeeded, "blocked_by": list(blocked_by)}
+
+    assert report._outcome(rec(True), rec(True)) == "**not stopped**"
+    assert report._outcome(rec(False, ["tool_policy"]), rec(True)) == "blocked by tool policy"
+    assert report._outcome(rec(False), rec(True)) == "no control fired (the model declined)"
+    refused = report._outcome(rec(False, ["input_filter"]), rec(False))
+    assert refused.startswith("model declined (also failed on vulnerable)") and "input filter" in refused
+    assert "blocked by" not in refused
