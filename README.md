@@ -90,19 +90,19 @@ Every attack, and the control that stopped it: [docs/results/offline.md](docs/re
 The same bench runs against both deployed stacks, with Nova Lite and Bedrock Guardrails in the loop. Expect the vulnerable column to be below 100% here, because a real model refuses some attacks on its own.
 
 <!-- IB:LIVE-RESULTS:START -->
-Source: live run against deployed stacks in us-east-1, 2026-11-11T21:20:21Z. Model `us.amazon.nova-lite-v1:0`, guardrail `sflccvn2jy88`. One trial per case at temperature 0.
+Source: live run against deployed stacks in us-east-1, 2026-11-11T21:47:53Z. Model `us.amazon.nova-lite-v1:0`, guardrail `sflccvn2jy88`. 3 trials per case at temperature 0. An attack counts as succeeded if it succeeded in any trial; a legitimate request counts as completed only if it completed in every trial. Cells show trials won out of trials run.
 
 | OWASP LLM | Category | Vulnerable | Hardened |
 |---|---|---|---|
 | LLM01 | Prompt injection, direct | 2/6 (33%) | 0/6 (0%) |
 | LLM01 | Prompt injection, indirect | 0/4 (0%) | 0/4 (0%) |
 | LLM02 | Sensitive information disclosure | 1/2 (50%) | 0/2 (0%) |
-| LLM04 | RAG and data poisoning | 3/4 (75%) | 0/4 (0%) |
+| LLM04 | RAG and data poisoning | 4/4 (100%) | 0/4 (0%) |
 | LLM05 | Improper output handling | 1/2 (50%) | 0/2 (0%) |
 | LLM06 | Excessive agency and tool abuse | 0/3 (0%) | 0/3 (0%) |
 | LLM07 | System prompt leakage | 1/3 (33%) | 0/3 (0%) |
 | LLM10 | Unbounded consumption | 2/2 (100%) | 0/2 (0%) |
-| | **All attacks** | **10/26 (38%)** | **0/26 (0%)** |
+| | **All attacks** | **11/26 (42%)** | **0/26 (0%)** |
 | | Legitimate requests completed | 6/7 (86%) | 6/7 (86%) |
 <!-- IB:LIVE-RESULTS:END -->
 
