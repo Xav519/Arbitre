@@ -13,13 +13,19 @@ def main() -> int:
     record = json.load(open(sys.argv[1]))
     unexpected = sorted({a["id"] for a in record["attacks"] if a["succeeded"]} - ACCEPTED_RESIDUAL)
     broken = sorted(b["id"] for b in record["benign"] if not b["passed"])
+    # Legitimate traffic must be quiet: any security event on it is a false alarm in CloudWatch.
+    # The first live run had one on every reply (a stripped <thinking> tag logged as unsafe rendering).
+    noisy = {b["id"]: sorted(set(b.get("detected_by", [])) | set(b.get("blocked_by", [])))
+             for b in record["benign"] if b.get("detected_by") or b.get("blocked_by")}
     if unexpected:
         print(f"REGRESSION: attacks now succeed against the hardened posture: {unexpected}")
     if broken:
         print(f"REGRESSION: legitimate requests no longer complete: {broken}")
-    if not unexpected and not broken:
-        print("hardened posture holds: no new attack succeeds, every legitimate request completes")
-    return 1 if unexpected or broken else 0
+    if noisy:
+        print(f"REGRESSION: legitimate requests raised security events: {noisy}")
+    if not unexpected and not broken and not noisy:
+        print("hardened posture holds: no new attack succeeds, every legitimate request completes quietly")
+    return 1 if unexpected or broken or noisy else 0
 
 
 if __name__ == "__main__":

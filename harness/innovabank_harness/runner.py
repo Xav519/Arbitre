@@ -72,6 +72,7 @@ def run(target, only: set[str] | None = None) -> dict:
             "id": case["id"], "name": case["name"],
             "passed": detectors.all_of(case["expect"], result, observed),
             "blocked_by": _controls(events, "blocked"),
+            "detected_by": sorted({e["ib_event"] for e in events}),
             "response": result.get("response", "")[:400],
         })
     target.reset()

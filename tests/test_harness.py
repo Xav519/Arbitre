@@ -85,3 +85,28 @@ def test_report_does_not_credit_controls_for_attacks_the_model_refused():
     refused = report._outcome(rec(False, ["input_filter"]), rec(False))
     assert refused.startswith("model declined (also failed on vulnerable)") and "input filter" in refused
     assert "blocked by" not in refused
+
+
+def test_legitimate_requests_raise_no_security_events(runs):
+    for record in runs:
+        noisy = {b["id"]: b["detected_by"] for b in record["benign"] if b["detected_by"] or b["blocked_by"]}
+        assert noisy == {}, record["meta"]["mode"]
+
+
+def test_regression_guard_fails_on_noisy_legitimate_traffic(tmp_path):
+    import json
+    import subprocess
+    import sys
+
+    guard = pathlib.Path(__file__).parent / "check_regression.py"
+
+    def run_guard(benign):
+        f = tmp_path / "run.json"
+        f.write_text(json.dumps({"attacks": [], "benign": [benign]}))
+        return subprocess.run([sys.executable, str(guard), str(f)], capture_output=True, text=True)
+
+    quiet = run_guard({"id": "OK-01", "passed": True, "blocked_by": [], "detected_by": []})
+    noisy = run_guard({"id": "OK-01", "passed": True, "blocked_by": ["output_filter"],
+                       "detected_by": ["unsafe_output_rendering"]})
+    assert quiet.returncode == 0
+    assert noisy.returncode == 1 and "raised security events" in noisy.stdout
