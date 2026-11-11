@@ -9,6 +9,7 @@ CONTROL_LABELS = {
     "tool_policy": "tool policy", "budget": "budget", "output_filter": "output filter",
     "data_minimisation": "data minimisation", "ingest_integrity": "signed ingestion",
     "ingest_scan": "ingestion scan",
+    "iam": "per-tool IAM",  # not an app control: logged when a tool's own role denies the AWS call
 }
 
 

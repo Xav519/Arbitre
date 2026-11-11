@@ -103,6 +103,11 @@ class Agent:
             return self._tool_result(use, {"error": "denied by policy", "reason": denied[0]}, error=True)
 
         result = self.dispatcher.call(name, args)
+        if result.get("access_denied"):
+            # Enforced by AWS whatever the posture, so always "blocked".
+            trace.event("tool_access_denied", "iam", True, f"{name}: {result.get('detail', '')}")
+            trace.tool(name, args, "denied", "denied by the tool's IAM role")
+            return self._tool_result(use, {"error": result["error"]}, error=True)
         trace.tool(name, args, "executed")
 
         if name in policy.UNTRUSTED_SOURCE_TOOLS and "error" not in result:

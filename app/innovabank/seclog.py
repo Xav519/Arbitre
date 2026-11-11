@@ -28,6 +28,8 @@ EVENTS = {
     "poisoned_content_in_output": ("AML.T0070", "RAG Poisoning", "LLM04"),
     "resource_budget_exceeded": ("AML.T0029", "Denial of AI Service", "LLM10"),
     "guardrail_intervened": ("AML.T0054", "LLM Jailbreak", "LLM01"),
+    # A tool's own IAM role refused the AWS call. Logged with control "iam": not an app switch.
+    "tool_access_denied": ("AML.T0053", "AI Agent Tool Invocation", "LLM06"),
 }
 
 

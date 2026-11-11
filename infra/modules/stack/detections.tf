@@ -23,6 +23,7 @@ locals {
     poisoned_content_in_output = { atlas = "AML.T0070", technique = "RAG Poisoning", owasp = "LLM04", source = "agent", threshold = 1 }
     resource_budget_exceeded   = { atlas = "AML.T0029", technique = "Denial of AI Service", owasp = "LLM10", source = "agent", threshold = 5 }
     guardrail_intervened       = { atlas = "AML.T0054", technique = "LLM Jailbreak", owasp = "LLM01", source = "agent", threshold = 3 }
+    tool_access_denied         = { atlas = "AML.T0053", technique = "AI Agent Tool Invocation", owasp = "LLM06", source = "agent", threshold = 1 }
   }
 
   metric_namespace = "InnovaBank/${var.mode}"

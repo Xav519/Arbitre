@@ -12,7 +12,7 @@ from .models import BedrockModel
 from .rag import BedrockEmbedder
 from .seclog import Trace
 from .store import AwsStore, KmsSigner
-from .tools import LambdaDispatcher, run_tool
+from .tools import LambdaDispatcher, access_denied_code, access_denied_result, run_tool
 
 
 @functools.lru_cache(maxsize=1)
@@ -53,7 +53,14 @@ def tool_handler(event, context):
     """Event: {"tool": str, "args": dict}. One function per tool, one role per function."""
     cfg, boto3, store = _runtime()
     embedder = BedrockEmbedder(boto3.client("bedrock-runtime"), cfg.embed_model_id)
-    return run_tool(str(event.get("tool", "")), dict(event.get("args") or {}), cfg, store, embedder)
+    try:
+        return run_tool(str(event.get("tool", "")), dict(event.get("args") or {}), cfg, store, embedder)
+    except Exception as exc:
+        code = access_denied_code(exc)
+        if code:  # this tool's role does not allow what was asked: report it, the agent logs it
+            operation = getattr(exc, "operation_name", "") or "AWS call"
+            return access_denied_result(f"{operation} {code}")
+        raise
 
 
 def ingest_handler(event, context):

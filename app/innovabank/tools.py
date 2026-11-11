@@ -7,6 +7,7 @@ blast radius of any single tool is fixed by IAM, not by application code.
 from __future__ import annotations
 
 import json
+import re
 import uuid
 
 from . import rag
@@ -119,6 +120,23 @@ class LocalDispatcher:
         return run_tool(name, args, self.cfg, self.store, self.embedder)
 
 
+# An IAM deny is the per-tool role doing its job. It must be reported as such, not as a
+# generic failure, so the agent can log it and the report can name the control.
+_DENIED_IN_MESSAGE = re.compile(r"\((\w*AccessDenied\w*|UnauthorizedOperation)\)|is not authorized to perform")
+
+
+def access_denied_code(exc: BaseException) -> str | None:
+    """The AWS error code if `exc` is an authorisation failure (botocore ClientError shape), else None."""
+    code = str((getattr(exc, "response", None) or {}).get("Error", {}).get("Code", ""))
+    if "AccessDenied" in code or code in ("UnauthorizedOperation", "AuthorizationError"):
+        return code
+    return None
+
+
+def access_denied_result(detail: str) -> dict:
+    return {"error": "access denied by the tool's IAM role", "access_denied": True, "detail": detail[:200]}
+
+
 class LambdaDispatcher:
     """Invokes the per-tool Lambda function."""
 
@@ -129,9 +147,18 @@ class LambdaDispatcher:
         function = self.cfg.tool_functions.get(name)
         if not function:
             return {"error": f"unknown tool {name}"}
-        resp = self.client.invoke(FunctionName=function, Payload=json.dumps({"tool": name, "args": args}).encode())
+        try:
+            resp = self.client.invoke(FunctionName=function, Payload=json.dumps({"tool": name, "args": args}).encode())
+        except Exception as exc:
+            code = access_denied_code(exc)
+            if code:  # the agent's own role may not invoke this tool function
+                return access_denied_result(f"lambda:InvokeFunction {code}")
+            raise
         payload = json.loads(resp["Payload"].read() or b"{}")
         if resp.get("FunctionError"):
-            # Typically AccessDenied from the tool's own IAM role: the backstop doing its job.
+            message = str(payload.get("errorMessage", ""))
+            denied = _DENIED_IN_MESSAGE.search(message)
+            if denied:  # an IAM deny the tool handler did not turn into a result itself
+                return access_denied_result(denied.group(1) or "not authorized")
             return {"error": "tool execution failed", "detail": str(payload.get("errorType", "error"))}
         return payload

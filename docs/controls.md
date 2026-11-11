@@ -18,7 +18,7 @@ A control that is off still evaluates and logs with `action: observed`. A contro
 | `data_minimisation` | Account tool returns only the fields the task needs | `tools.py` | none | Limits what any leak can contain |
 | `ingest_integrity` | Only documents with a valid KMS signature are indexed | `ingest.py`, `store.py` | none | II-01, RP-01 (first control to act) |
 | `ingest_scan` | Injection patterns at ingestion, quarantine on hit | `ingest.py` | none | II-01, II-02 |
-| Per-tool IAM | One least-privilege role per tool function | `iam.tf` | not switchable, enforced by AWS | Backstop for SD-02 and for any tool misuse outside its data |
+| Per-tool IAM | One least-privilege role per tool function. A deny is logged as `tool_access_denied` with `control: iam`, always `blocked` | `iam.tf`, `tools.py`, `handlers.py`, `agent.py` | not switchable, enforced by AWS | Backstop for SD-02 and for any tool misuse outside its data |
 
 "None" in the fourth column does not mean a control is redundant. It means every attack it stops is also stopped by another layer, which is the goal. Remove two layers at once and those attacks return, for example:
 
@@ -41,4 +41,4 @@ python -m innovabank_harness run --target aws --outputs infra/envs/hardened/outp
   --only SD-02 --out results/iam-backstop.json
 ```
 
-The request reaches the document tool, S3 answers access denied because the tool's role is scoped to `kb/public/*`, and the attack fails with no application control involved. Redeploy without the override afterwards.
+The request reaches the document tool, S3 answers access denied because the tool's role is scoped to `kb/public/*`, and the attack fails with no application control involved. The tool function returns the deny as a result instead of crashing, the agent logs `tool_access_denied` (ATLAS AML.T0053, OWASP LLM06) attributed to `iam`, the `tool_access_denied` alarm fires, and the report lists the attack as blocked by per-tool IAM. Redeploy without the override afterwards.
