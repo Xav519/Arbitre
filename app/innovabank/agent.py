@@ -10,6 +10,7 @@ import json
 import uuid
 
 from . import guards, policy
+from .models import strip_reasoning
 from .prompts import system_prompt
 from .seclog import Trace
 from .tools import SPECS
@@ -47,7 +48,8 @@ class Agent:
             messages.append(reply)
             uses = [b["toolUse"] for b in reply.get("content", []) if "toolUse" in b]
             if not uses:
-                answer = "".join(b.get("text", "") for b in reply.get("content", [])).strip() or answer
+                text = "".join(b.get("text", "") for b in reply.get("content", []))
+                answer = strip_reasoning(text) or answer
                 break
             results = [self._run_tool(use, customer, state, trace) for use in uses]
             messages.append({"role": "user", "content": results})

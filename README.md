@@ -67,7 +67,7 @@ Want the full walkthrough? Read [how it works, in plain English](docs/how-it-wor
 The real code and controls run against a scripted model that does whatever any injection reaching it says. This takes the model's own judgement out of the picture, so the result shows what the controls guarantee by themselves. CI runs it on every push.
 
 <!-- IB:OFFLINE-RESULTS:START -->
-Source: offline control verification, run 2026-11-11T03:40:00Z. Real orchestrator and controls, in process, against a scripted model that obeys every injection that reaches it. Bedrock Guardrails is not exercised. The vulnerable column is 100% by construction: with no controls, a model that obeys everything loses to everything.
+Source: offline control verification, run 2026-11-11T20:59:02Z. Real orchestrator and controls, in process, against a scripted model that obeys every injection that reaches it. Bedrock Guardrails is not exercised. The vulnerable column is 100% by construction: with no controls, a model that obeys everything loses to everything.
 
 | OWASP LLM | Category | Vulnerable | Hardened |
 |---|---|---|---|

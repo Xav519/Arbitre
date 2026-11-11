@@ -49,7 +49,8 @@ class LocalTarget:
         return self._ingest(key)
 
     def invoke(self, prompt: str, customer_id: str, script: list[dict]) -> dict:
-        agent = Agent(self.cfg, ScriptedModel(script), LocalDispatcher(self.cfg, self.store, self.embedder), self.store)
+        model = ScriptedModel(script, reasoning=True)  # replies carry <thinking> blocks, like Nova
+        agent = Agent(self.cfg, model, LocalDispatcher(self.cfg, self.store, self.embedder), self.store)
         return agent.handle(prompt, customer_id, quiet=True)
 
     def observe(self) -> dict:
