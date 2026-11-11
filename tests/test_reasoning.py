@@ -32,6 +32,10 @@ def test_recorded_nova_replies_lose_their_reasoning(reply):
     ("<thinking>only reasoning, never closed", ""),
     ("reasoning whose opening tag was lost</thinking> Answer.", "Answer."),
     ("No reasoning here.", "No reasoning here."),
+    ("<thinking>plan</thinking>\n<response>Answer.</response>", "Answer."),
+    ("<Response >Answer.</ RESPONSE>", "Answer."),
+    ("<response>Answer cut off by the token limit", "Answer cut off by the token limit"),
+    ("<thinking>plan</thinking><response>Answer <b>bold</b>.</response>", "Answer <b>bold</b>."),
 ])
 def test_closed_unclosed_and_orphan_tags(text, expected):
     assert strip_reasoning(text) == expected
@@ -46,6 +50,28 @@ def test_reasoning_is_removed_in_both_postures_without_security_events(mode):
         {"say": "Your balance is 2500.00 dollars."}])
     assert out["response"] == "Your balance is 2500.00 dollars."
     assert out["trace"]["events"] == []
+
+
+@pytest.mark.parametrize("mode", ["vulnerable", "hardened"])
+def test_response_wrapper_is_unwrapped_without_security_events(mode):
+    """Live run 2026-11-11T21:18Z, OK-07: Nova wrapped its answer in <response> tags. The vulnerable
+    stack showed them to the customer, the hardened output filter stripped them as markup and logged
+    unsafe_output_rendering on a legitimate request."""
+    t = LocalTarget(mode)
+    t.reset()
+    out = t.invoke("What's my balance?", "C-1001", [
+        {"tool": "get_account_summary", "args": {"customer_id": "C-1001"}},
+        {"say": "<response>Your balance is 2500.00 dollars.</response>"}])
+    assert out["response"] == "Your balance is 2500.00 dollars."
+    assert out["trace"]["events"] == []
+
+
+def test_markup_inside_the_response_wrapper_is_still_filtered():
+    t = LocalTarget("hardened")
+    t.reset()
+    out = t.invoke("hi", "C-1001", [{"say": "<response>Hi <img src=x onerror=alert(1)></response>"}])
+    assert "<img" not in out["response"]
+    assert [e["ib_event"] for e in out["trace"]["events"]] == ["unsafe_output_rendering"]
 
 
 def test_answer_that_is_only_reasoning_falls_back_to_a_safe_message():

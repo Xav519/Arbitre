@@ -18,6 +18,9 @@ import uuid
 _REASONING_BLOCK = re.compile(r"<\s*thinking\b[^>]*>.*?<\s*/\s*thinking\s*>", re.IGNORECASE | re.DOTALL)
 _REASONING_OPEN = re.compile(r"<\s*thinking\b[^>]*>", re.IGNORECASE)
 _REASONING_CLOSE = re.compile(r"<\s*/\s*thinking\s*>", re.IGNORECASE)
+# Nova also sometimes wraps the answer itself in <response> tags. The tags are
+# plumbing, the text inside them is the answer: unwrap, keep the text.
+_RESPONSE_TAG = re.compile(r"<\s*/?\s*response\b[^>]*>", re.IGNORECASE)
 
 # What ScriptedModel says in its reasoning, so a leak is easy to spot in a report.
 SCRIPTED_REASONING = "IB-SCRIPTED-REASONING planning the next step for the customer."
@@ -30,6 +33,7 @@ def strip_reasoning(text: str) -> str:
     text is reasoning (typically a reply cut off by the token limit), so it is
     dropped. An orphan closing tag means everything before it was reasoning.
     Fails closed: when in doubt, text is removed rather than shown.
+    Then <response> wrapper tags are removed and their content kept.
     """
     text = _REASONING_BLOCK.sub("", text)
     opened = _REASONING_OPEN.search(text)
@@ -38,6 +42,7 @@ def strip_reasoning(text: str) -> str:
     closes = list(_REASONING_CLOSE.finditer(text))
     if closes:
         text = text[closes[-1].end():]
+    text = _RESPONSE_TAG.sub("", text)
     return text.strip()
 
 
