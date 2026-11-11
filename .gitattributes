@@ -1,0 +1,5 @@
+# Normalise line endings so Windows and WSL editors don't produce whole-file diffs.
+* text=auto eol=lf
+
+*.png binary
+*.zip binary
