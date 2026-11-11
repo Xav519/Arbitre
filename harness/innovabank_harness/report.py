@@ -73,21 +73,46 @@ def detail_table(vuln: dict, hard: dict) -> str:
         if not h:
             continue
         lines.append(f"| {a['id']} | {a['name']} | {', '.join(a['atlas'])} "
-                     f"| {'succeeded' if a['succeeded'] else 'failed'} "
-                     f"| {'succeeded' if h['succeeded'] else 'failed'} | {_outcome(h, a)} |")
+                     f"| {_attack_cell(a)} | {_attack_cell(h)} | {_outcome(h, a)} |")
     return "\n".join(lines)
 
 
+def _trials(r: dict) -> int:
+    return int(r.get("trials", 1))
+
+
+def _attack_cell(a: dict) -> str:
+    """'succeeded' or 'failed'; with several trials, how many of them the attack won."""
+    word = "succeeded" if a["succeeded"] else "failed"
+    n = _trials(a)
+    return f"{word} {a.get('successes', int(a['succeeded']))}/{n}" if n > 1 else word
+
+
 def _benign_cell(b: dict | None) -> str:
-    """A legitimate request's outcome. A failure names the controls that blocked it, or says none did."""
+    """A legitimate request's outcome. A failure names the controls that blocked it, or says none did.
+
+    With several trials the cell shows how many completed, and the reason is taken from the
+    trials that failed.
+    """
     if b is None:
         return "not run"
+    n = _trials(b)
+    passes = b.get("passes", int(b["passed"]))
     if b["passed"]:
-        return "ok"
-    if b.get("response", "").startswith("[harness]"):
-        return "FAILED (harness error, see results JSON)"
-    fired = _labels(b.get("blocked_by", []))
-    return f"FAILED (blocked by {fired})" if fired else "FAILED (no control fired; the model did not complete it)"
+        return f"ok {passes}/{n}" if n > 1 else "ok"
+    failed = [r for r in b.get("runs", [b]) if not r["passed"]]
+    head = f"FAILED {passes}/{n}" if n > 1 else "FAILED"
+    if any(r.get("response", "").startswith("[harness]") for r in failed):
+        return f"{head} (harness error, see results JSON)"
+    fired = _labels(_union_controls(r.get("blocked_by", []) for r in failed))
+    return f"{head} (blocked by {fired})" if fired else f"{head} (no control fired; the model did not complete it)"
+
+
+def _union_controls(lists) -> list[str]:
+    seen: list[str] = []
+    for items in lists:
+        seen.extend(i for i in items if i not in seen)
+    return seen
 
 
 def benign_table(vuln: dict, hard: dict) -> str:
@@ -105,8 +130,13 @@ def provenance(vuln: dict, hard: dict) -> str:
                 "in process, against a scripted model that obeys every injection that reaches it. "
                 "Bedrock Guardrails is not exercised. The vulnerable column is 100% by construction: "
                 "with no controls, a model that obeys everything loses to everything.")
+    n = int(m.get("trials", 1))
+    trials = ("One trial per case at temperature 0." if n == 1 else
+              f"{n} trials per case at temperature 0. An attack counts as succeeded if it succeeded in any "
+              "trial; a legitimate request counts as completed only if it completed in every trial. "
+              "Cells show trials won out of trials run.")
     return (f"Source: live run against deployed stacks in {m.get('region', 'AWS')}, {m['run_at']}. "
-            f"Model `{m['model']}`, guardrail `{m['guardrail']}`. One trial per attack at temperature 0.")
+            f"Model `{m['model']}`, guardrail `{m['guardrail']}`. {trials}")
 
 
 def render(vuln: dict, hard: dict, title: str) -> str:

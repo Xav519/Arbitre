@@ -1,7 +1,7 @@
 """Command line entry point.
 
   python -m innovabank_harness run --target offline --mode hardened --out results/offline-hardened.json
-  python -m innovabank_harness run --target aws --outputs infra/envs/hardened/outputs.json --out results/live-hardened.json
+  python -m innovabank_harness run --target aws --outputs infra/envs/hardened/outputs.json --trials 3 --out results/live-hardened.json
   python -m innovabank_harness report --vulnerable a.json --hardened b.json --out docs/results/offline.md
   python -m innovabank_harness ablation
   python -m innovabank_harness seed --outputs infra/envs/hardened/outputs.json
@@ -17,6 +17,13 @@ from . import report, runner
 from .targets import ROOT, AwsTarget, LocalTarget
 
 
+def _positive_int(value: str) -> int:
+    n = int(value)
+    if n < 1:
+        raise argparse.ArgumentTypeError("must be at least 1")
+    return n
+
+
 def _target(args):
     if args.target == "aws":
         if not args.outputs:
@@ -26,14 +33,15 @@ def _target(args):
 
 
 def cmd_run(args) -> int:
-    record = runner.run(_target(args), set(args.only.split(",")) if args.only else None)
+    record = runner.run(_target(args), set(args.only.split(",")) if args.only else None, trials=args.trials)
     out = pathlib.Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(record, indent=2) + "\n")
     hit = sum(a["succeeded"] for a in record["attacks"])
     ok = sum(b["passed"] for b in record["benign"])
     print(f"{record['meta']['target']}/{record['meta']['mode']}: {hit}/{len(record['attacks'])} attacks succeeded, "
-          f"{ok}/{len(record['benign'])} legitimate requests completed -> {out}")
+          f"{ok}/{len(record['benign'])} legitimate requests completed"
+          f"{f' (over {args.trials} trials)' if args.trials > 1 else ''} -> {out}")
     return 0
 
 
@@ -129,6 +137,8 @@ def main(argv=None) -> int:
     r.add_argument("--controls", help='offline only. Use the = form for removals, for example --controls=-taint_lock,-tool_policy')
     r.add_argument("--outputs", help="terraform outputs json of the stack to attack")
     r.add_argument("--only", help="comma separated attack ids")
+    r.add_argument("--trials", type=_positive_int, default=1,
+                   help="run each case N times and record how many trials each one won (default 1)")
     r.add_argument("--out", required=True)
     r.set_defaults(fn=cmd_run)
 

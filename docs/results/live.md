@@ -1,6 +1,6 @@
 # InnovaBank results: live Bedrock run
 
-Source: live run against deployed stacks in us-east-1, 2026-11-11T21:20:21Z. Model `us.amazon.nova-lite-v1:0`, guardrail `sflccvn2jy88`. One trial per attack at temperature 0.
+Source: live run against deployed stacks in us-east-1, 2026-11-11T21:20:21Z. Model `us.amazon.nova-lite-v1:0`, guardrail `sflccvn2jy88`. One trial per case at temperature 0.
 
 ## Attack success rate by category
 

@@ -67,7 +67,7 @@ Want the full walkthrough? Read [how it works, in plain English](docs/how-it-wor
 The real code and controls run against a scripted model that does whatever any injection reaching it says. This takes the model's own judgement out of the picture, so the result shows what the controls guarantee by themselves. CI runs it on every push.
 
 <!-- IB:OFFLINE-RESULTS:START -->
-Source: offline control verification, run 2026-11-11T21:24:00Z. Real orchestrator and controls, in process, against a scripted model that obeys every injection that reaches it. Bedrock Guardrails is not exercised. The vulnerable column is 100% by construction: with no controls, a model that obeys everything loses to everything.
+Source: offline control verification, run 2026-11-11T21:27:32Z. Real orchestrator and controls, in process, against a scripted model that obeys every injection that reaches it. Bedrock Guardrails is not exercised. The vulnerable column is 100% by construction: with no controls, a model that obeys everything loses to everything.
 
 | OWASP LLM | Category | Vulnerable | Hardened |
 |---|---|---|---|
@@ -90,7 +90,7 @@ Every attack, and the control that stopped it: [docs/results/offline.md](docs/re
 The same bench runs against both deployed stacks, with Nova Lite and Bedrock Guardrails in the loop. Expect the vulnerable column to be below 100% here, because a real model refuses some attacks on its own.
 
 <!-- IB:LIVE-RESULTS:START -->
-Source: live run against deployed stacks in us-east-1, 2026-11-11T21:20:21Z. Model `us.amazon.nova-lite-v1:0`, guardrail `sflccvn2jy88`. One trial per attack at temperature 0.
+Source: live run against deployed stacks in us-east-1, 2026-11-11T21:20:21Z. Model `us.amazon.nova-lite-v1:0`, guardrail `sflccvn2jy88`. One trial per case at temperature 0.
 
 | OWASP LLM | Category | Vulnerable | Hardened |
 |---|---|---|---|
@@ -185,7 +185,7 @@ make gate        # supply chain gate and ML-BOM
 ```bash
 make deploy-vulnerable && make deploy-hardened
 make ask MSG="What is my balance?"     # talk to the agent, see its tool calls and security events
-make attack-live && make report-live   # real model, real Guardrails, results written to this README
+make attack-live TRIALS=3 && make report-live   # real model, real Guardrails, results written to this README
 make destroy
 ```
 

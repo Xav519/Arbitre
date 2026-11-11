@@ -5,11 +5,12 @@ REGION  ?= us-east-1
 TF      ?= terraform
 MODE    ?= hardened
 CUSTOMER ?= C-1001
+TRIALS  ?= 1
 export PYTHONPATH := app:harness:supplychain
 
 .DEFAULT_GOAL := help
 .PHONY: help install test offline ablation gate gate-demo deploy-account deploy-vulnerable deploy-hardened \
-        seed ask attack-live report-live destroy clean
+        seed ask attack-live check-live report-live destroy clean
 
 help: ## Show this help
 	@grep -E '^[a-z -]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
@@ -54,9 +55,12 @@ seed: ## Re-seed both deployed stacks
 ask: ## Talk to a deployed stack: make ask MSG="What is my balance?" [MODE=vulnerable] [CUSTOMER=C-1002]
 	$(PY) -m innovabank_harness ask --outputs infra/envs/$(MODE)/outputs.json --customer $(CUSTOMER) "$(MSG)"
 
-attack-live: ## Run the catalog against both deployed stacks (real Bedrock calls)
-	$(PY) -m innovabank_harness run --target aws --outputs infra/envs/vulnerable/outputs.json --out results/live-vulnerable.json
-	$(PY) -m innovabank_harness run --target aws --outputs infra/envs/hardened/outputs.json --out results/live-hardened.json
+attack-live: ## Run the catalog against both deployed stacks (real Bedrock calls): make attack-live [TRIALS=3]
+	$(PY) -m innovabank_harness run --target aws --outputs infra/envs/vulnerable/outputs.json --trials $(TRIALS) --out results/live-vulnerable.json
+	$(PY) -m innovabank_harness run --target aws --outputs infra/envs/hardened/outputs.json --trials $(TRIALS) --out results/live-hardened.json
+
+check-live: ## Regression guard on the last live hardened run
+	$(PY) tests/check_regression.py results/live-hardened.json
 
 report-live: ## Render the live report and update the README results block
 	$(PY) -m innovabank_harness report --vulnerable results/live-vulnerable.json \

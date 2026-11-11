@@ -1,6 +1,6 @@
 # InnovaBank results: offline control verification
 
-Source: offline control verification, run 2026-11-11T21:24:00Z. Real orchestrator and controls, in process, against a scripted model that obeys every injection that reaches it. Bedrock Guardrails is not exercised. The vulnerable column is 100% by construction: with no controls, a model that obeys everything loses to everything.
+Source: offline control verification, run 2026-11-11T21:27:32Z. Real orchestrator and controls, in process, against a scripted model that obeys every injection that reaches it. Bedrock Guardrails is not exercised. The vulnerable column is 100% by construction: with no controls, a model that obeys everything loses to everything.
 
 ## Attack success rate by category
 
