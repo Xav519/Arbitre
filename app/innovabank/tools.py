@@ -46,9 +46,9 @@ SPECS = [
 # read by Nova as a restriction on transfers too (live OK-02 refused 3/3).
 _BOUND_MESSAGE_SPEC = {
     "name": "send_secure_message",
-    "description": "Email the customer a message, for example a transfer confirmation or a statement summary. "
-                   "It is delivered to the customer's email address on file, so this tool takes only a "
-                   "subject and a body.",
+    "description": "Email the customer a message when they ask to be emailed, for example a confirmation or a "
+                   "statement summary they requested. It is delivered to the customer's email address on file, "
+                   "so this tool takes only a subject and a body.",
     "inputSchema": {"json": {"type": "object", "properties": {
         "subject": {"type": "string"}, "body": {"type": "string"}},
         "required": ["subject", "body"]}}}
