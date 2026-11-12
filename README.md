@@ -128,6 +128,8 @@ Source: live run against deployed stacks in us-east-1, 2026-11-12T02:37:45Z. Mod
 | | Legitimate requests completed | 6/7 (86%) | 7/7 (100%) |
 <!-- IB:LIVE-RESULTS:END -->
 
+**Why is vulnerable at 6/7 for legitimate requests completed? Not because of security. On one normal question about transfer limits, the model gave an incomplete answer (it forgot the daily limit). The hardened version has clearer instructions, so it answered fully every time.
+
 ### What each control is holding back
 
 Hardened stack, offline, one control turned off at a time:
