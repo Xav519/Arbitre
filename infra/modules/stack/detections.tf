@@ -45,6 +45,7 @@ resource "aws_cloudwatch_log_metric_filter" "detection" {
 }
 
 resource "aws_sns_topic" "security" {
+  #checkov:skip=CKV_AWS_26:CloudWatch alarms cannot publish to a topic encrypted with the AWS managed key (see below)
   # Not encrypted with alias/aws/sns on purpose: CloudWatch alarms cannot publish
   # to a topic that uses the AWS managed key. Alarm text holds no customer data.
   name = "${local.name}-security-alarms"

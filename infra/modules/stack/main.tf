@@ -58,6 +58,11 @@ locals {
 # ----------------------------------------------------------------------------- storage
 
 resource "aws_s3_bucket" "data" {
+  # Lab trade-offs, both postures. The bucket holds synthetic data and is destroyed after each demo.
+  #checkov:skip=CKV_AWS_18:Access logging needs a second bucket kept beyond teardown; CloudTrail data events cover audit if needed
+  #checkov:skip=CKV_AWS_144:Cross-region replication doubles cost for synthetic, disposable data
+  #checkov:skip=CKV2_AWS_61:No lifecycle rule; the stack is destroyed between demos (force_destroy)
+  #checkov:skip=CKV_AWS_145:SSE-S3 (AES256) on purpose; integrity of the knowledge base comes from KMS signatures, not bucket encryption
   bucket_prefix = "${local.name}-"
   force_destroy = true # lab stack, torn down between demos
 }
@@ -109,6 +114,12 @@ resource "aws_s3_bucket_policy" "tls_only" {
 resource "aws_dynamodb_table" "this" {
   for_each = local.tables
 
+  # Encrypted at rest with the AWS owned key. A customer managed key per table adds monthly cost
+  # and key policy work with no gain for synthetic data. Point in time recovery is pointless for a
+  # lab that seed.reset() restores to a known state before every attack.
+  #checkov:skip=CKV_AWS_119:AWS owned key is enough for synthetic lab data; CMK adds cost and policy surface
+  #checkov:skip=CKV_AWS_28:Tables are re-seeded before every case and destroyed after the demo; no backup value
+
   name         = "${local.name}-${each.key}"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = each.value
@@ -126,6 +137,9 @@ resource "aws_dynamodb_table" "this" {
 # Asymmetric key for knowledge base documents. Publishers hold kms:Sign.
 # The ingestion function holds kms:Verify and nothing else on this key.
 resource "aws_kms_key" "signing" {
+  # Default key policy (account root) on purpose: who may sign and verify is granted through IAM,
+  # the ingestion role gets kms:Verify only (iam.tf), publishers get kms:Sign.
+  #checkov:skip=CKV2_AWS_64:Default key policy delegates to IAM; Sign/Verify separation is enforced in iam.tf
   description              = "${local.name} knowledge base document signing"
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
@@ -149,12 +163,26 @@ data "archive_file" "app" {
 resource "aws_cloudwatch_log_group" "fn" {
   for_each = local.functions
 
+  #checkov:skip=CKV_AWS_338:Retention is var.log_retention_days; a one-year lab log adds cost with no benefit
+  #checkov:skip=CKV_AWS_158:Logs hold security events and synthetic data only; service-managed encryption is used
+
   name              = "/aws/lambda/${local.function_names[each.key]}"
   retention_in_days = var.log_retention_days
 }
 
 resource "aws_lambda_function" "fn" {
   for_each = local.functions
+
+  # Production items this lab does not need. No VPC: the functions only call AWS APIs and have no
+  # private resources to reach. No DLQ: invocations are synchronous and tool calls are never retried
+  # (a retried transfer would move money twice). No reserved concurrency: the tool call budget caps
+  # fan-out per turn. Env vars hold resource names and model ids, never secrets.
+  #checkov:skip=CKV_AWS_117:No private resources to reach; a VPC would add NAT cost for AWS API calls only
+  #checkov:skip=CKV_AWS_116:Synchronous invocations, never retried; a DLQ would never receive anything
+  #checkov:skip=CKV_AWS_115:Fan-out is capped by the per-turn tool call budget in the orchestrator
+  #checkov:skip=CKV_AWS_173:Environment holds names and ids only, no secrets; default Lambda encryption applies
+  #checkov:skip=CKV_AWS_50:X-Ray off to keep the lab cheap; every decision is logged as a structured security event
+  #checkov:skip=CKV_AWS_272:Code signing needs a signing profile; the zip is built from this repository by Terraform
 
   function_name    = local.function_names[each.key]
   role             = aws_iam_role.fn[each.key].arn

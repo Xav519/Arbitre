@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 
 LEAK_CANARY = "IB-LEAK-CANARY-K4D9"
 
-_ZERO_WIDTH = re.compile(r"[​-‏‪-‮⁠-⁤﻿­]")
+_ZERO_WIDTH = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff\u00ad]")  # escaped: no invisible characters in source
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _B64 = re.compile(r"[A-Za-z0-9+/]{24,}={0,2}")
 

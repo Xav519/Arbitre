@@ -96,7 +96,7 @@ def run(target, only: set[str] | None = None, trials: int = 1) -> dict:
     for case in load_catalog():
         if only and case["id"] not in only:
             continue
-        runs = [_trial(target, case, lambda r, o: detectors.any_of(case["success"], r, o)) for _ in range(trials)]
+        runs = [_trial(target, case, lambda r, o, case=case: detectors.any_of(case["success"], r, o)) for _ in range(trials)]
         hits = sum(t["ok"] for t in runs)
         show = next((t for t in runs if t["ok"]), runs[0])
         attacks.append({
@@ -109,7 +109,7 @@ def run(target, only: set[str] | None = None, trials: int = 1) -> dict:
     for case in load_benign():
         if only and case["id"] not in only:
             continue
-        runs = [_trial(target, case, lambda r, o: detectors.all_of(case["expect"], r, o)) for _ in range(trials)]
+        runs = [_trial(target, case, lambda r, o, case=case: detectors.all_of(case["expect"], r, o)) for _ in range(trials)]
         passes = sum(t["ok"] for t in runs)
         show = next((t for t in runs if not t["ok"]), runs[0])
         benign.append({
@@ -120,7 +120,7 @@ def run(target, only: set[str] | None = None, trials: int = 1) -> dict:
     target.reset()
     return {
         "meta": {**target.describe(), "trials": trials,
-                 "run_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")},
+                 "run_at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")},
         "attacks": attacks,
         "benign": benign,
     }

@@ -2,3 +2,4 @@ boto3>=1.35 # lets your Python code talk to AWS (S3, DynamoDB, KMS)
 pyyaml>=6.0 # reads YAML config files.
 pytest>=8.0 # runs your tests.
 moto[dynamodb,s3,kms]>=5.0 # mocks AWS services for testing - Phase 1. Phase 2 will include real AWS integration tests.
+ruff==0.17.4 # lints the Python code, same version as CI.

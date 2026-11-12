@@ -9,7 +9,7 @@ TRIALS  ?= 1
 export PYTHONPATH := app:harness:supplychain
 
 .DEFAULT_GOAL := help
-.PHONY: help install test offline ablation gate gate-demo deploy-account deploy-vulnerable deploy-hardened \
+.PHONY: help install test lint offline ablation gate gate-demo deploy-account deploy-vulnerable deploy-hardened \
         seed ask attack-live attack-live-one check-live report-live destroy clean
 
 help: ## Show this help
@@ -20,6 +20,10 @@ install: ## Install Python dependencies for tests, harness and gate
 
 test: ## Unit tests (no AWS account needed)
 	$(PY) -m pytest -q
+
+lint: ## Ruff on the Python code, terraform fmt check on infra/ (same as CI; checkov runs in CI)
+	$(PY) -m ruff check .
+	$(TF) fmt -check -recursive infra
 
 offline: ## Run the attack catalog in process against both postures and write the report
 	$(PY) -m innovabank_harness run --target offline --mode vulnerable --out results/offline-vulnerable.json

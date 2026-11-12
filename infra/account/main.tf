@@ -35,6 +35,8 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 resource "aws_cloudwatch_log_group" "invocations" {
+  #checkov:skip=CKV_AWS_338:Optional lab logging, 14 days is enough to inspect a run; it holds prompts, so shorter is better
+  #checkov:skip=CKV_AWS_158:Service-managed encryption; the log is removed with terraform destroy after the lab
   name              = "/innovabank/bedrock/model-invocations"
   retention_in_days = 14
 }

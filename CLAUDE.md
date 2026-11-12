@@ -26,7 +26,7 @@ python -m innovabank_harness run --target offline --mode hardened --controls=-ta
 
 Live (real AWS, costs money): `make deploy-vulnerable`, `make deploy-hardened` (Terraform apply, writes `infra/envs/<mode>/outputs.json`, then seeds), `make ask MSG="..." [MODE=vulnerable] [CUSTOMER=C-1002]`, `make attack-live && make report-live` (rewrites `docs/results/live.md` and the README live block), `make destroy`.
 
-CI (`.github/workflows/ci.yml`) runs: tests + offline bench + regression guard; supply chain gate + proof the scanner rejects a malicious pickle; `terraform validate` on `infra/envs/{vulnerable,hardened}` and `infra/account`.
+CI (`.github/workflows/ci.yml`) runs: tests + offline bench + regression guard; `ruff check` (rules in `pyproject.toml`); checkov on `infra/` (accepted lab trade-offs are inline `#checkov:skip=ID:reason` comments, so a new finding fails); supply chain gate + proof the scanner rejects a malicious pickle; `terraform fmt -check` and `terraform validate` on `infra/envs/{vulnerable,hardened}` and `infra/account`. `make lint` runs ruff and the fmt check locally.
 
 ## Architecture
 

@@ -98,7 +98,7 @@ class Config:
         return control in self.controls
 
     @classmethod
-    def for_mode(cls, mode: str, controls_override: str | None = None, **kw) -> "Config":
+    def for_mode(cls, mode: str, controls_override: str | None = None, **kw) -> Config:
         controls = resolve_controls(mode, controls_override)
         if "budget" not in controls:
             kw.setdefault("max_tool_calls", 40)
@@ -106,7 +106,7 @@ class Config:
         return cls(mode=mode, controls=controls, **kw)
 
     @classmethod
-    def from_env(cls) -> "Config":
+    def from_env(cls) -> Config:
         e = os.environ
         return cls.for_mode(
             e.get("IB_MODE", "vulnerable"),

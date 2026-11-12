@@ -32,6 +32,30 @@ jobs:
       - name: Regression guard, hardened posture
         run: python tests/check_regression.py results/offline-hardened.json
 
+  lint:
+    name: Python lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install ruff==0.17.4
+      - run: ruff check .
+
+  iac-scan:
+    name: IaC scan (checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install checkov==3.4.4
+      # Fails on any new finding. Accepted lab trade-offs are skipped inline in the .tf files,
+      # each with its reason (#checkov:skip=ID:reason).
+      - run: checkov -d infra --framework terraform --quiet --compact
+
   supply-chain:
     name: AI supply chain gate
     runs-on: ubuntu-latest
@@ -59,11 +83,13 @@ jobs:
           path: ml-bom.cdx.json
 
   terraform:
-    name: Terraform validate
+    name: Terraform fmt and validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
+      - name: Formatting
+        run: terraform fmt -check -recursive -diff infra
       - name: Validate every root
         run: |
           for root in infra/envs/vulnerable infra/envs/hardened infra/account; do

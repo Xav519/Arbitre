@@ -61,7 +61,7 @@ def retrieve(query: str, store, embedder, k: int = 3) -> list[dict]:
     q = embedder.embed(query)
     scored = []
     for c in store.kb_all_chunks():
-        score = sum(a * b for a, b in zip(q, c["embedding"]))
+        score = sum(a * b for a, b in zip(q, c["embedding"], strict=False))
         scored.append((score, c))
     scored.sort(key=lambda s: s[0], reverse=True)
     return [{"source": c["doc_key"], "text": c["text"], "score": round(s, 4)}
