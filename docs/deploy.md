@@ -269,8 +269,10 @@ To remove the taint lock from the hardened stack and re-run the bench against it
 ```bash
 terraform -chdir=infra/envs/hardened apply -var 'controls_override=-taint_lock'
 terraform -chdir=infra/envs/hardened output -json > infra/envs/hardened/outputs.json
-python3 -m innovabank_harness run --target aws --outputs infra/envs/hardened/outputs.json --out results/live-no-taint-lock.json
+make attack-live-one MODE=hardened TRIALS=3 OUT=results/live-no-taint-lock.json
 ```
+
+`make attack-live-one` runs the bench against one stack. `ONLY=SD-02,II-01` limits it to some attacks, and `OUT` defaults to `results/live-<MODE>.json`, which would overwrite the full run, so name the file for an experiment. The make target sets `PYTHONPATH` for you; calling `python3 -m innovabank_harness` directly needs `PYTHONPATH=app:harness:supplychain`.
 
 Put it back by running `terraform -chdir=infra/envs/hardened apply` with no override, then re-export the outputs the same way.
 

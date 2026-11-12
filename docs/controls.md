@@ -23,7 +23,7 @@ A control that is off still evaluates and logs with `action: observed`. A contro
 "None" in the fourth column does not mean a control is redundant. It means every attack it stops is also stopped by another layer, which is the goal. Remove two layers at once and those attacks return, for example:
 
 ```bash
-python -m innovabank_harness run --target offline --mode hardened \
+PYTHONPATH=app:harness:supplychain python3 -m innovabank_harness run --target offline --mode hardened \
   --controls=-taint_lock,-tool_policy --out results/no-tool-controls.json
 ```
 
@@ -52,8 +52,7 @@ Redeploy the hardened posture with the tool policy and output filter off, then a
 
 ```bash
 terraform -chdir=infra/envs/hardened apply -var 'controls_override=-tool_policy,-output_filter'
-python -m innovabank_harness run --target aws --outputs infra/envs/hardened/outputs.json \
-  --only SD-02 --out results/iam-backstop.json
+make attack-live-one MODE=hardened ONLY=SD-02 OUT=results/iam-backstop.json
 ```
 
 The request reaches the document tool, S3 answers access denied because the tool's role is scoped to `kb/public/*`, and the attack fails with no application control involved. The tool function returns the deny as a result instead of crashing, the agent logs `tool_access_denied` (ATLAS AML.T0053, OWASP LLM06) attributed to `iam`, the `tool_access_denied` alarm fires, and the report lists the attack as blocked by per-tool IAM. Redeploy without the override afterwards.

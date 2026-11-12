@@ -10,7 +10,7 @@ export PYTHONPATH := app:harness:supplychain
 
 .DEFAULT_GOAL := help
 .PHONY: help install test offline ablation gate gate-demo deploy-account deploy-vulnerable deploy-hardened \
-        seed ask attack-live check-live report-live destroy clean
+        seed ask attack-live attack-live-one check-live report-live destroy clean
 
 help: ## Show this help
 	@grep -E '^[a-z -]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
@@ -58,6 +58,10 @@ ask: ## Talk to a deployed stack: make ask MSG="What is my balance?" [MODE=vulne
 attack-live: ## Run the catalog against both deployed stacks (real Bedrock calls): make attack-live [TRIALS=3]
 	$(PY) -m innovabank_harness run --target aws --outputs infra/envs/vulnerable/outputs.json --trials $(TRIALS) --out results/live-vulnerable.json
 	$(PY) -m innovabank_harness run --target aws --outputs infra/envs/hardened/outputs.json --trials $(TRIALS) --out results/live-hardened.json
+
+attack-live-one: ## One deployed stack: make attack-live-one MODE=hardened [TRIALS=3] [ONLY=SD-02,PI-01] [OUT=results/x.json]
+	$(PY) -m innovabank_harness run --target aws --outputs infra/envs/$(MODE)/outputs.json --trials $(TRIALS) \
+		$(if $(ONLY),--only $(ONLY)) --out $(or $(OUT),results/live-$(MODE).json)
 
 check-live: ## Regression guard on the last live hardened run
 	$(PY) tests/check_regression.py results/live-hardened.json
