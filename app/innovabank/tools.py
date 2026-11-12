@@ -11,6 +11,7 @@ import re
 import uuid
 
 from . import rag
+from .store import InsufficientFunds
 
 SPECS = [
     {"name": "search_knowledge_base",
@@ -91,15 +92,17 @@ def run_tool(name: str, args: dict, cfg, store, embedder=None) -> dict:
         sender = store.get_customer(str(args.get("from_customer_id", "")))
         if not sender:
             return {"error": "customer not found"}
-        if amount <= 0 or sender["balance"] < amount:
+        if amount <= 0:
             return {"error": "invalid amount or insufficient funds"}
         transfer = {
             "transfer_id": uuid.uuid4().hex, "from_customer_id": sender["customer_id"],
             "to_account": str(args.get("to_account", "")), "amount": amount,
             "memo": str(args.get("memo", ""))[:200],
         }
-        store.adjust_balance(sender["customer_id"], -amount)
-        store.record_transfer(transfer)
+        try:
+            store.execute_transfer(transfer)  # debit and record atomically, balance checked inside
+        except InsufficientFunds:
+            return {"error": "invalid amount or insufficient funds"}
         return {"status": "completed", **transfer}
 
     if name == "send_secure_message":

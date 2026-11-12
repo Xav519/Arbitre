@@ -80,6 +80,10 @@ class KmsSigner:
 
 # --------------------------------------------------------------------------- memory
 
+class InsufficientFunds(Exception):
+    """The sender does not exist or cannot cover the amount. Nothing was changed."""
+
+
 class MemoryStore:
     def __init__(self):
         self.customers: dict[str, dict] = {}
@@ -96,11 +100,13 @@ class MemoryStore:
     def put_customer(self, item: dict) -> None:
         self.customers[item["customer_id"]] = copy.deepcopy(item)
 
-    def adjust_balance(self, customer_id: str, delta: float) -> None:
-        self.customers[customer_id]["balance"] = round(self.customers[customer_id]["balance"] + delta, 2)
-
     # transfers and outbox
-    def record_transfer(self, item: dict) -> None:
+    def execute_transfer(self, item: dict) -> None:
+        """Debit the sender and record the transfer, both or neither."""
+        sender = self.customers.get(item["from_customer_id"])
+        if not sender or sender["balance"] < item["amount"]:
+            raise InsufficientFunds(item["from_customer_id"])
+        sender["balance"] = round(sender["balance"] - item["amount"], 2)
         self.transfers.append(copy.deepcopy(item))
 
     def list_transfers(self) -> list[dict]:
@@ -212,17 +218,47 @@ class AwsStore:
     def put_customer(self, item: dict) -> None:
         self._table("customers").put_item(Item=_to_ddb(item))
 
-    def adjust_balance(self, customer_id: str, delta: float) -> None:
-        self._table("customers").update_item(
-            Key={"customer_id": customer_id},
-            UpdateExpression="ADD balance :d",
-            ConditionExpression="attribute_exists(customer_id)",
-            ExpressionAttributeValues={":d": Decimal(str(delta))},
-        )
-
     # transfers and outbox
-    def record_transfer(self, item: dict) -> None:
-        self._table("transfers").put_item(Item=_to_ddb(item))
+    def execute_transfer(self, item: dict) -> None:
+        """Debit the sender and record the transfer in one DynamoDB transaction.
+
+        Either both writes land or neither does: an IAM deny on the transfers table,
+        a throttle or a crash cannot leave a debit without its transfer record. The
+        balance check is a condition inside the transaction, so two concurrent
+        transfers cannot both spend the same money. The transfer id is the
+        idempotency token, so a retried call cannot debit twice.
+
+        IAM: TransactWriteItems has no action of its own. Each item is authorised as
+        the action it performs (dynamodb:UpdateItem on customers, dynamodb:PutItem
+        on transfers), which the transfer tool's role already holds.
+        """
+        from botocore.exceptions import ClientError
+
+        amount = Decimal(str(item["amount"]))
+        try:
+            # The resource's client takes plain Python values, like the Table API.
+            self._ddb.meta.client.transact_write_items(
+                ClientRequestToken=str(item["transfer_id"])[:36],
+                TransactItems=[
+                    {"Update": {
+                        "TableName": self._names["customers"],
+                        "Key": {"customer_id": item["from_customer_id"]},
+                        "UpdateExpression": "SET balance = balance - :a",
+                        "ConditionExpression": "attribute_exists(customer_id) AND balance >= :a",
+                        "ExpressionAttributeValues": {":a": amount},
+                    }},
+                    {"Put": {
+                        "TableName": self._names["transfers"],
+                        "Item": _to_ddb(item),
+                        "ConditionExpression": "attribute_not_exists(transfer_id)",
+                    }},
+                ],
+            )
+        except ClientError as exc:
+            reasons = [r.get("Code") for r in exc.response.get("CancellationReasons", [])]
+            if exc.response["Error"]["Code"] == "TransactionCanceledException" and reasons[:1] == ["ConditionalCheckFailed"]:
+                raise InsufficientFunds(item["from_customer_id"]) from None
+            raise
 
     def list_transfers(self) -> list[dict]:
         return self._scan("transfers")

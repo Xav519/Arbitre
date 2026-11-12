@@ -61,6 +61,9 @@ locals {
       { Effect = "Allow", Action = ["dynamodb:GetItem"], Resource = [local.table_arn["customers"]] },
     ]
 
+    # The debit and the transfer record are one DynamoDB transaction
+    # (TransactWriteItems). It has no IAM action of its own: each item is
+    # authorised as UpdateItem on customers and PutItem on transfers.
     "tool-transfer-funds" = [
       { Effect = "Allow", Action = ["dynamodb:GetItem", "dynamodb:UpdateItem"], Resource = [local.table_arn["customers"]] },
       { Effect = "Allow", Action = ["dynamodb:PutItem"], Resource = [local.table_arn["transfers"]] },
