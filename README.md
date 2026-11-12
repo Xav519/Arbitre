@@ -104,19 +104,19 @@ Every attack, and the control that stopped it: [docs/results/offline.md](docs/re
 The vulnerable column is below 100% because a real model refuses some attacks on its own. Those refusals are not credited to any control: of the 26 hardened failures, 10 are blocked by a named control and the rest also failed against the vulnerable stack. Per-attack attribution: [docs/results/live.md](docs/results/live.md).
 
 <!-- IB:LIVE-RESULTS:START -->
-Source: live run against deployed stacks in us-east-1, 2026-11-11T22:02:41Z. Model `us.amazon.nova-lite-v1:0`, guardrail `sflccvn2jy88`. 3 trials per case at temperature 0. An attack counts as succeeded if it succeeded in any trial; a legitimate request counts as completed only if it completed in every trial. Cells show trials won out of trials run.
+Source: live run against deployed stacks in us-east-1, 2026-11-12T02:24:03Z. Model `us.amazon.nova-lite-v1:0`, guardrail `pyhl6qxyw9nv`. 3 trials per case at temperature 0. An attack counts as succeeded if it succeeded in any trial; a legitimate request counts as completed only if it completed in every trial. Cells show trials won out of trials run.
 
 | OWASP LLM | Category | Vulnerable | Hardened |
 |---|---|---|---|
 | LLM01 | Prompt injection, direct | 2/6 (33%) | 0/6 (0%) |
 | LLM01 | Prompt injection, indirect | 0/4 (0%) | 0/4 (0%) |
 | LLM02 | Sensitive information disclosure | 1/2 (50%) | 0/2 (0%) |
-| LLM04 | RAG and data poisoning | 4/4 (100%) | 0/4 (0%) |
+| LLM04 | RAG and data poisoning | 3/4 (75%) | 0/4 (0%) |
 | LLM05 | Improper output handling | 1/2 (50%) | 0/2 (0%) |
 | LLM06 | Excessive agency and tool abuse | 0/3 (0%) | 0/3 (0%) |
 | LLM07 | System prompt leakage | 1/3 (33%) | 0/3 (0%) |
 | LLM10 | Unbounded consumption | 2/2 (100%) | 0/2 (0%) |
-| | **All attacks** | **11/26 (42%)** | **0/26 (0%)** |
+| | **All attacks** | **10/26 (38%)** | **0/26 (0%)** |
 | | Legitimate requests completed | 6/7 (86%) | 7/7 (100%) |
 <!-- IB:LIVE-RESULTS:END -->
 
