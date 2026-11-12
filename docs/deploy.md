@@ -112,7 +112,7 @@ make install
 make test
 ```
 
-`make test` should end with `67 passed` (the number grows as tests are added).
+`make test` should end with `N passed` and no failures (the number grows as tests are added).
 
 ### 2.3 Run the attack bench offline
 
@@ -201,7 +201,7 @@ What each stack creates:
 | DynamoDB tables | 4 | Customers, transfers, outbox (sent messages), knowledge base index |
 | S3 bucket | 1 | `kb/public/` (help articles), `internal/` (must never leak), `quarantine/` |
 | KMS key | 1 | Asymmetric key that signs and verifies knowledge base documents |
-| CloudWatch metric filters and alarms | 12 + 12 | One per security event type, tagged with MITRE ATLAS |
+| CloudWatch metric filters and alarms | 13 + 13 | One per security event type, tagged with MITRE ATLAS |
 | SNS topic | 1 | Where alarms go |
 | Logs Insights saved queries | 2 | Events by ATLAS technique, and a per-request timeline |
 | Bedrock guardrail | 1 | Hardened stack only |
