@@ -77,7 +77,8 @@ def cmd_ablation(args) -> int:
              "| Control removed | Attacks that now succeed | Legitimate requests |", "|---|---|---|"]
     for control in ALL_CONTROLS:
         if control == "guardrail":
-            lines.append("| Bedrock Guardrails | not measurable offline, use control ablation on the deployed stack | n/a |")
+            lines.append("| Bedrock Guardrails | not measurable offline. Live, on the deployed stack (3 trials): "
+                         "PI-06 succeeds 3/3 without it, 0/3 with it. See docs/controls.md | n/a offline |")
             continue
         rec = runner.run(LocalTarget("hardened", f"-{control}"))
         back = sorted({a["id"] for a in rec["attacks"] if a["succeeded"]} - baseline)

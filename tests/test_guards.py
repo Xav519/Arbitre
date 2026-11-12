@@ -82,6 +82,23 @@ def test_output_keeps_official_phone_and_removes_unverified_one():
     assert "1-800-555-0199" in text and "900-555-0142" not in text
 
 
+@pytest.mark.parametrize("number", [
+    "1-800-555-0199", "1 (800) 555-0199", "(800) 555-0199", "+1 800 555 0199", "800.555.0199", "1 800-555-0199",
+])
+def test_output_keeps_official_phone_in_any_common_format(number):
+    # Live OK-07 without Guardrails logged unverified phone removals on a legitimate request. The format was ruled out
+    # as the cause: the number on file passes however the model writes it. The model had invented a new number.
+    text, findings = guards.check_output(f"Call us at {number}, any time.")
+    assert number in text and findings == []
+
+
+def test_output_redacts_invented_phone_without_blocking_the_reply():
+    text, findings = guards.check_output(
+        "The daily limit is 5,000 dollars. For an exception, call customer service at 1-800-555-0123.")
+    assert "5,000 dollars" in text and "555-0123" not in text and "[unverified contact removed]" in text
+    assert [(f.ib_event, f.block) for f in findings] == [("poisoned_content_in_output", False)]
+
+
 def test_output_blocks_credential_patterns():
     text, findings = guards.check_output("key is ibk_live_9f3a71c2d4e8b6a0c5d7")
     assert text == guards.OUTPUT_BLOCKED and findings[0].ib_event == "sensitive_data_in_output"
