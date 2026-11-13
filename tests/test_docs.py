@@ -1,4 +1,4 @@
-"""The README stays renderable and honest about its own structure."""
+"""The README and the docs stay renderable and honest about their own structure."""
 import pathlib
 import re
 
@@ -6,8 +6,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 
-def test_no_em_or_en_dashes():
-    assert "—" not in README and "–" not in README
+def test_no_em_or_en_dashes_in_any_document():
+    docs = [ROOT / "README.md", ROOT / "CLAUDE.md", *sorted((ROOT / "docs").rglob("*.md"))]
+    dashes = ("\u2014", "\u2013")  # em dash, en dash (escaped so this file has none either)
+    offenders = [str(p.relative_to(ROOT)) for p in docs if any(d in p.read_text(encoding="utf-8") for d in dashes)]
+    assert offenders == []
 
 
 def test_generated_result_blocks_are_still_marked():
