@@ -220,6 +220,7 @@ Cost is a few dollars if you destroy it within the week. There is no public endp
 | [Threat model](docs/threat-model.md) | Assets, trust boundaries, adversaries, measured results, residual risk |
 | [Control matrix](docs/controls.md) | Every control and detection event, with its ATLAS mapping and live attribution |
 | [Results](docs/results/) | Offline, ablation and live reports |
+| [Repository guide](docs/REPO_GUIDE.md) | Every folder and file explained simply, one message and one attack traced through the code, a glossary |
 
 ---
 
