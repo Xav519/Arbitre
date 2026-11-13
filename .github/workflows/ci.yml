@@ -1,3 +1,20 @@
+# Every time you push code, GitHub reads ci.yml and runs a set of checks for
+# you, on its own machines. It makes sure your code works and is clean, that
+# your Terraform is valid and secure, that your AI models haven't been tampered
+# with, and most importantly, that the hardened agent still blocks every
+# attack. If something breaks, you get a red X right away instead of finding
+# out later.
+#
+# All of this runs "offline," which means it never touches your real AWS
+# account. The real AI model is swapped for a fake one that gives pre-written
+# answers, and AWS is faked in memory. That keeps CI free, fast, safe (there
+# are no AWS keys in GitHub to steal), and consistent, since the same code
+# always gives the same result. The one limit is that offline tests prove your
+# logic works, not that the real Bedrock model will behave exactly the same,
+# so you still test against real AWS by hand from time to time.
+# ---------------------------------------------------------------------------
+
+  
 # Continuous integration for the lab. Every job runs offline: no AWS account,
 # no credentials and no Bedrock calls, so CI is free and safe to run on forks.
 # The jobs are independent and run in parallel; any one failing blocks the merge.
