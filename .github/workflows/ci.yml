@@ -1,37 +1,64 @@
+# Continuous integration for the lab. Every job runs offline: no AWS account,
+# no credentials and no Bedrock calls, so CI is free and safe to run on forks.
+# The jobs are independent and run in parallel; any one failing blocks the merge.
 name: ci
 
+# Run on every push to main and on every pull request, so a change is checked
+# before it lands and again after it lands.
 on:
   push:
     branches: [main]
   pull_request:
 
+# Least privilege: the jobs only need to read the code. Nothing here writes to
+# the repository, so a compromised step cannot push commits or edit releases.
 permissions:
   contents: read
 
 jobs:
+  # The core check: the code works, and the hardened posture still stops the attacks.
   test:
     name: Unit tests and offline attack bench
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Pin the Python version so results do not drift when the runner image
+      # changes. Caching pip downloads, keyed on the requirements file, makes
+      # reruns faster and resets automatically when the dependencies change.
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: requirements-dev.txt
+      # Use the same make targets as local development, so "works on my machine"
+      # and "works in CI" mean the same thing.
       - run: make install
+      # Unit tests mock AWS with moto, so they need no account.
       - run: make test
+      # Run the full attack catalog against both postures in process, with the
+      # scripted model instead of Bedrock. The vulnerable run shows the attacks
+      # are real; the hardened run is what the regression guard checks below.
+      # The report is appended to the job summary so reviewers can read the
+      # results on the run page without downloading anything.
       - name: Offline attack bench
         run: |
           python -m innovabank_harness run --target offline --mode vulnerable --out results/offline-vulnerable.json
           python -m innovabank_harness run --target offline --mode hardened --out results/offline-hardened.json
           python -m innovabank_harness report --vulnerable results/offline-vulnerable.json --hardened results/offline-hardened.json --out results/offline.md
           cat results/offline.md >> "$GITHUB_STEP_SUMMARY"
+        # The harness imports the app, the harness and the supply chain code as
+        # top level packages, so all three folders must be on the import path.
         env:
           PYTHONPATH: app:harness:supplychain
+      # The bench itself always succeeds; this step turns its results into a
+      # pass or fail. It fails if a hardened attack gets through (beyond the
+      # documented, accepted residual risks), if a legitimate request breaks,
+      # or if a legitimate request raises a security event (which would fire
+      # alarms on real customers).
       - name: Regression guard, hardened posture
         run: python tests/check_regression.py results/offline-hardened.json
 
+  # Style and common bug patterns in the Python code. Rules live in pyproject.toml.
   lint:
     name: Python lint (ruff)
     runs-on: ubuntu-latest
@@ -40,9 +67,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      # Pin the exact ruff version: a newer release can add rules and fail the
+      # build even though no code changed.
       - run: python -m pip install ruff==0.17.4
       - run: ruff check .
 
+  # Static security scan of the Terraform, to catch insecure cloud settings
+  # (open buckets, missing encryption, broad IAM) before they are deployed.
   iac-scan:
     name: IaC scan (checkov)
     runs-on: ubuntu-latest
@@ -51,11 +82,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      # Pinned for the same reason as ruff: new checks would otherwise fail the
+      # build without any change on our side.
       - run: python -m pip install checkov==3.4.4
       # Fails on any new finding. Accepted lab trade-offs are skipped inline in the .tf files,
       # each with its reason (#checkov:skip=ID:reason).
       - run: checkov -d infra --framework terraform --quiet --compact
 
+  # Checks the models and artifacts the agent depends on, since a tampered
+  # model is as dangerous as tampered code.
   supply-chain:
     name: AI supply chain gate
     runs-on: ubuntu-latest
@@ -64,11 +99,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      # The gate only needs PyYAML, so skip the full dev install to keep the job fast.
       - run: python -m pip install pyyaml
+      # Verifies the pinned model IDs in supplychain/model-lock.yaml, scans
+      # model files for unsafe pickles, and writes a machine learning bill of
+      # materials (CycloneDX ML-BOM) listing what the agent is built on.
       - name: Provenance, artifact scan, ML-BOM
         run: python -m ib_supplychain gate --bom ml-bom.cdx.json
         env:
           PYTHONPATH: supplychain
+      # A scanner that never finds anything looks the same as one that works.
+      # This step builds a malicious pickle on the fly (it is never loaded, so
+      # it is harmless) and fails the build if the scanner lets it through.
+      # It goes in the runner's temp folder so it never lands in the repository.
       - name: Prove the scanner rejects a malicious artifact
         run: |
           python supplychain/make_demo_fixture.py "$RUNNER_TEMP/demo"
@@ -77,19 +120,29 @@ jobs:
           fi
         env:
           PYTHONPATH: supplychain
+      # Keep the ML-BOM as a downloadable file on the run page, so anyone can
+      # inspect exactly what each build was made from.
       - uses: actions/upload-artifact@v4
         with:
           name: ml-bom
           path: ml-bom.cdx.json
 
+  # Catches Terraform mistakes without touching AWS.
   terraform:
     name: Terraform fmt and validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
+      # Fails if any file is not in standard Terraform format, and prints the
+      # diff so the fix is obvious. Consistent formatting keeps reviews about
+      # real changes, not whitespace.
       - name: Formatting
         run: terraform fmt -check -recursive -diff infra
+      # Each folder below is a separate deployable root, so each must be
+      # validated on its own. "-backend=false" skips remote state, so no AWS
+      # credentials are needed; "-input=false" stops Terraform from waiting
+      # for a prompt that nobody in CI can answer.
       - name: Validate every root
         run: |
           for root in infra/envs/vulnerable infra/envs/hardened infra/account; do
