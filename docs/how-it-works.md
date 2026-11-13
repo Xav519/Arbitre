@@ -94,7 +94,7 @@ Switching off any single one of these locks does not bring the attack back. That
 ## Two kinds of results
 
 - **Offline (worst case).** The model is replaced by a script that obeys every injection that reaches it. This tests the locks, not the model. Result: 26 of 26 attacks succeed against the vulnerable stack and 2 of 26 against the hardened one, and all 7 normal customer requests still work. It runs on every push to GitHub.
-- **Live.** The real Nova model and the real Guardrails on AWS, 3 trials per attack. Result: 11 of 26 attacks succeed against the vulnerable stack and 0 of 26 against the hardened one, and all 7 normal requests work in every trial. The vulnerable number is lower than 26 because a real model refuses some attacks on its own, and those refusals are not credited to any control. The live run shows what happens today with this model. The offline run shows what still holds if the model fails completely.
+- **Live.** The real Nova model and the real Guardrails on AWS, 3 trials per attack. Result: 10 of 26 attacks succeed against the vulnerable stack and 0 of 26 against the hardened one, and all 7 normal requests work in every trial on the hardened stack. The vulnerable number is lower than 26 because a real model refuses some attacks on its own, and those refusals are not credited to any control. The live run shows what happens today with this model. The offline run shows what still holds if the model fails completely.
 
 ## What still gets through
 

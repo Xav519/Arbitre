@@ -190,7 +190,7 @@ Each command does four things:
 1. `terraform init` downloads the AWS provider.
 2. `terraform apply` shows the plan. Read it, then type `yes`. It takes about 3 to 5 minutes.
 3. It saves the stack's resource names to `infra/envs/<mode>/outputs.json`. The harness reads this file.
-4. It seeds the stack: 5 fake customers, the knowledge base documents signed with the stack's KMS key, and the search index.
+4. It seeds the stack: 3 fake customers, the knowledge base documents signed with the stack's KMS key, and the search index.
 
 What each stack creates:
 
