@@ -1,0 +1,9 @@
+# Keep the SHA-pinned GitHub Actions in .github/workflows up to date. Dependabot
+# rewrites both the SHA and the trailing version comment, so each update arrives
+# as a reviewable PR that runs the full CI before it can merge.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
