@@ -249,6 +249,8 @@ def spotlight(text: str, nonce: str) -> str:
     # it in advance, so it cannot fake a closing fence and "escape" to write
     # its own instructions outside. Breaking up any "<<" or ">>" in the text
     # removes the other way of faking a fence.
+
+    # nonce is made in agent.py, inside _prepare_untrusted, and it builds a random 128-bits ID
     safe = text.replace("<<", "< <").replace(">>", "> >")
     return f"<<UNTRUSTED_DOCUMENT id={nonce}>>\n{safe}\n<<END_UNTRUSTED_DOCUMENT id={nonce}>>"
 
