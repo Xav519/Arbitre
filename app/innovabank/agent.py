@@ -62,7 +62,7 @@ class Agent:
 
     def _screen_input(self, message: str, trace: Trace) -> str | None:
         cfg = self.cfg
-        if len(message) > 4000:
+        if len(message) > policy.HARDENED_INPUT_BUDGET:
             enforced = cfg.on("budget")
             trace.event("resource_budget_exceeded", "budget", enforced, f"input of {len(message)} characters")
             if enforced:

@@ -80,9 +80,11 @@ class Config:
     embed_model_id: str = "amazon.titan-embed-text-v2:0"
     guardrail_id: str = ""
     guardrail_version: str = ""
-    # Limits. The vulnerable posture gets deliberately loose values.
+    # Model rounds per turn are max_tool_calls + 2. With the budget control off the
+    # loop gets far more rounds, so a runaway tool loop can actually happen. The
+    # budget checks themselves (policy.HARDENED_TOOL_BUDGET, HARDENED_INPUT_BUDGET)
+    # run with fixed limits in both postures, so they still log when off.
     max_tool_calls: int = 6
-    max_input_chars: int = 4000
     transfer_limit: float = 1000.0
     retrieval_k: int = 3
     # AWS resource names, empty when running in process.
@@ -102,7 +104,6 @@ class Config:
         controls = resolve_controls(mode, controls_override)
         if "budget" not in controls:
             kw.setdefault("max_tool_calls", 40)
-            kw.setdefault("max_input_chars", 200_000)
         return cls(mode=mode, controls=controls, **kw)
 
     @classmethod

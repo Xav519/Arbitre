@@ -13,6 +13,7 @@ from dataclasses import dataclass
 HIGH_RISK_TOOLS = {"transfer_funds", "send_secure_message"}
 UNTRUSTED_SOURCE_TOOLS = {"search_knowledge_base", "read_document"}
 HARDENED_TOOL_BUDGET = 6
+HARDENED_INPUT_BUDGET = 4000  # characters per message
 PUBLIC_DOC_PREFIX = "kb/public/"
 
 _SCHEMAS = {

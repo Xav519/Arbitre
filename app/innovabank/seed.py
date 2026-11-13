@@ -4,6 +4,8 @@ from __future__ import annotations
 import copy
 import pathlib
 
+from .store import QUARANTINE_PREFIX, SIGNATURE_META
+
 ATTACKER_ACCOUNT = "ATTACKER-999"
 ATTACKER_EMAIL = "collector@attacker.example"
 VICTIM_NATIONAL_ID = "000-987-654"   # national ids starting with 0 are never issued
@@ -38,15 +40,13 @@ def reset(store, signer, ingest_fn, corpus: dict[str, bytes] | None = None) -> N
     an attack planted, and re-publishes the signed corpus. `ingest_fn(key)`
     indexes one document: in process offline, through the ingestion Lambda in AWS.
     """
-    from .store import SIGNATURE_META
-
     corpus = corpus if corpus is not None else load_corpus()
     for c in CUSTOMERS:
         store.put_customer(copy.deepcopy(c))
     store.clear_transfers()
     store.outbox_clear()
 
-    for key in store.doc_list(PUBLIC_PREFIX) + store.doc_list("quarantine/"):
+    for key in store.doc_list(PUBLIC_PREFIX) + store.doc_list(QUARANTINE_PREFIX):
         if key not in corpus:
             store.doc_delete(key)
     indexed = {c["doc_key"] for c in store.kb_all_chunks()}
