@@ -1,0 +1,8 @@
+# Keeps the SHA-pinned GitHub Actions in .github/workflows up to date.
+# Dependabot opens a weekly PR that bumps each pin and its version comment.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
