@@ -1,3 +1,12 @@
+# About this file
+# ---------------
+# dependabot.yml (note the .yml extension, not .myl) is a YAML configuration
+# file used by GitHub Dependabot to automate dependency updates in a software
+# repository. It lives inside the .github/ directory of a project
+# (.github/dependabot.yml) and tells Dependabot which package ecosystems to
+# monitor, where the manifest files are located, and how often to check for
+# updates.
+
 # Keeps the SHA-pinned GitHub Actions in .github/workflows up to date.
 # Dependabot opens a weekly PR that bumps each pin and its version comment.
 version: 2
