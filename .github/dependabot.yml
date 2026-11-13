@@ -14,4 +14,8 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    # Demo project: Dependabot still checks for updates but opens no PRs.
+    # Set this to a positive number (e.g. 5) to turn update PRs back on.
+    # Does not affect security update PRs (disable those in repo settings).
+    open-pull-requests-limit: 0
